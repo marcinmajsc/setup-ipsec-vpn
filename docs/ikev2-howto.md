@@ -153,7 +153,7 @@ To connect to the VPN:
 
 (Optional feature) Enable **VPN On Demand** to automatically start a VPN connection when your Mac is on Wi-Fi. To enable, check the **Connect on demand** checkbox for the VPN connection, and click **Apply**. To find this setting on macOS Ventura and newer, click on the "i" icon on the right of the VPN connection.
 
-You can customize VPN On Demand rules to exclude certain Wi-Fi network(s) such as your home network. See "Guide: Customize IKEv2 VPN On Demand rules for macOS and iOS" in [:book: Book: Set Up Your Own IPsec VPN, OpenVPN and WireGuard Server](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-O5O7FVF8J).
+You can customize VPN On Demand rules to exclude certain Wi-Fi networks (such as your home network). For more information, see the chapter "Guide: Customize IKEv2 VPN On Demand rules for macOS and iOS" in [:book: Book: Set Up Your Own IPsec VPN, OpenVPN and WireGuard Server](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-O5O7FVF8J).
 
 <details>
 <summary>
@@ -188,6 +188,8 @@ Once connected, you can verify that your traffic is being routed properly by [lo
 
 If you get an error when trying to connect, see [Troubleshooting](#ikev2-troubleshooting).
 
+**Note:** macOS 14 (Sonoma) has a minor issue that may cause IKEv2 VPN to disconnect and reconnect once every 24-48 minutes. Other macOS versions are not affected. For more details and a workaround, see [macOS Sonoma clients reconnect](#macos-sonoma-clients-reconnect).
+
 <details>
 <summary>
 Remove the IKEv2 VPN connection.
@@ -215,8 +217,36 @@ To connect to the VPN:
 
 (Optional feature) Enable **VPN On Demand** to automatically start a VPN connection when your iOS device is on Wi-Fi. To enable, tap the "i" icon on the right of the VPN connection, and enable **Connect On Demand**.
 
-You can customize VPN On Demand rules to exclude certain Wi-Fi network(s) such as your home network, or to start the VPN connection both on Wi-Fi and cellular. See "Guide: Customize IKEv2 VPN On Demand rules for macOS and iOS" in [:book: Book: Set Up Your Own IPsec VPN, OpenVPN and WireGuard Server](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-O5O7FVF8J).
+You can customize VPN On Demand rules to exclude certain Wi-Fi networks (such as your home network). For more information, see the chapter "Guide: Customize IKEv2 VPN On Demand rules for macOS and iOS" in [:book: Book: Set Up Your Own IPsec VPN, OpenVPN and WireGuard Server](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-O5O7FVF8J).
 
+<details>
+<summary>
+Customize VPN On Demand rules: Connect on Wi-Fi and cellular networks.
+</summary>
+
+The default VPN On Demand configuration only starts a VPN connection on Wi-Fi networks, but not on cellular networks. If you want the VPN to connect on both Wi-Fi and cellular networks:
+
+1. Edit `/opt/src/ikev2.sh` on the VPN server. Find the lines:
+   ```
+     <dict>
+       <key>InterfaceTypeMatch</key>
+       <string>Cellular</string>
+       <key>Action</key>
+       <string>Disconnect</string>
+     </dict>
+   ```
+   and replace "Disconnect" with "Connect":
+   ```
+     <dict>
+       <key>InterfaceTypeMatch</key>
+       <string>Cellular</string>
+       <key>Action</key>
+       <string>Connect</string>
+     </dict>
+   ```
+2. Save the file, then run `sudo ikev2.sh` to export updated client config files for your iOS device(s).
+3. Remove the previously imported VPN profile from your iOS device(s), then import the new `.mobileconfig` file(s) from step 2.
+</details>
 <details>
 <summary>
 If you manually set up IKEv2 without using the helper script, click here for instructions.
@@ -260,7 +290,11 @@ To remove the IKEv2 VPN connection, open Settings -> General -> VPN & Device Man
 
 ### Android
 
+#### Using strongSwan VPN client
+
 [[Supporters] **Screencast:** Connect using Android strongSwan VPN Client](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-O5O7FVF8J)
+
+Android users can connect using strongSwan VPN client (recommended).
 
 1. Securely transfer the generated `.sswan` file to your Android device.
 1. Install strongSwan VPN Client from [**Google Play**](https://play.google.com/store/apps/details?id=org.strongswan.android), [**F-Droid**](https://f-droid.org/en/packages/org.strongswan.android/) or [**strongSwan download server**](https://download.strongswan.org/Android/).
@@ -273,33 +307,7 @@ To remove the IKEv2 VPN connection, open Settings -> General -> VPN & Device Man
 1. Tap **IMPORT**.
 1. Tap the new VPN profile to connect.
 
-<details open>
-<summary>
-Alternatively, Android 11+ users can also connect using the native IKEv2 client.
-</summary>
-
-[[Supporters] **Screencast:** Connect using Native VPN Client on Android 11+](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-O5O7FVF8J)
-
-1. Securely transfer the generated `.p12` file to your Android device.
-1. Launch the **Settings** application.
-1. Go to Security -> Advanced -> Encryption & credentials.
-1. Tap **Install a certificate**.
-1. Tap **VPN & app user certificate**.
-1. Choose the `.p12` file you transferred from the VPN server.   
-   **Note:** To find the `.p12` file, tap the three-line menu button, then browse to the location you saved the file.
-1. Enter a name for the certificate, then tap **OK**.
-1. Go to Settings -> Network & internet -> VPN, then tap the "+" button.
-1. Enter a name for the VPN profile.
-1. Select **IKEv2/IPSec RSA** from the **Type** drop-down menu.
-1. Enter `Your VPN Server IP` (or DNS name) in the **Server address** field.   
-   **Note:** This must **exactly match** the server address in the output of the IKEv2 helper script.
-1. Enter anything (e.g. `empty`) in the **IPSec identifier** field.   
-   **Note:** This field should not be required. It is a bug in Android.
-1. Select the certificate you imported from the **IPSec user certificate** drop-down menu.
-1. Select the certificate you imported from the **IPSec CA certificate** drop-down menu.
-1. Select **(receive from server)** from the **IPSec server certificate** drop-down menu.
-1. Tap **Save**. Then tap the new VPN connection and tap **Connect**.
-</details>
+(Optional feature) You can choose to enable the "Always-on VPN" feature on Android. Launch the **Settings** app, go to Network & internet -> Advanced -> VPN, click the gear icon on the right of "strongSwan VPN Client", then enable the **Always-on VPN** and **Block connections without VPN** options.
 
 <details>
 <summary>
@@ -308,9 +316,6 @@ If your device runs Android 6.0 or older, click here for additional instructions
 
 If your device runs Android 6.0 (Marshmallow) or older, in order to connect using the strongSwan VPN client, you must make the following change on the VPN server: Edit `/etc/ipsec.d/ikev2.conf` on the server. Append `authby=rsa-sha1` to the end of the `conn ikev2-cp` section, indented by two spaces. Save the file and run `service ipsec restart`.
 </details>
-
-(Optional feature) You can choose to enable the "Always-on VPN" feature on Android. Launch the **Settings** app, go to Network & internet -> Advanced -> VPN, click the gear icon on the right of "strongSwan VPN Client", then enable the **Always-on VPN** and **Block connections without VPN** options.
-
 <details>
 <summary>
 If you manually set up IKEv2 without using the helper script, click here for instructions.
@@ -348,6 +353,36 @@ If you manually set up IKEv2 without using the helper script, click here for ins
 1. **(Important)** Tap **Show advanced settings**. Scroll down, find and enable the **Use RSA/PSS signatures** option.
 1. Save the new VPN connection, then tap to connect.
 </details>
+
+Once connected, you can verify that your traffic is being routed properly by [looking up your IP address on Google](https://www.google.com/search?q=my+ip). It should say "Your public IP address is `Your VPN Server IP`".
+
+If you get an error when trying to connect, see [Troubleshooting](#ikev2-troubleshooting).
+
+#### Using native IKEv2 client
+
+[[Supporters] **Screencast:** Connect using Native VPN Client on Android 11+](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-O5O7FVF8J)
+
+Android 11+ users can also connect using the native IKEv2 client.
+
+1. Securely transfer the generated `.p12` file to your Android device.
+1. Launch the **Settings** application.
+1. Go to Security -> Advanced -> Encryption & credentials.
+1. Tap **Install a certificate**.
+1. Tap **VPN & app user certificate**.
+1. Choose the `.p12` file you transferred from the VPN server.   
+   **Note:** To find the `.p12` file, tap the three-line menu button, then browse to the location you saved the file.
+1. Enter a name for the certificate, then tap **OK**.
+1. Go to Settings -> Network & internet -> VPN, then tap the "+" button.
+1. Enter a name for the VPN profile.
+1. Select **IKEv2/IPSec RSA** from the **Type** drop-down menu.
+1. Enter `Your VPN Server IP` (or DNS name) in the **Server address** field.   
+   **Note:** This must **exactly match** the server address in the output of the IKEv2 helper script.
+1. Enter anything (e.g. `empty`) in the **IPSec identifier** field.   
+   **Note:** This field should not be required. It is a bug in Android.
+1. Select the certificate you imported from the **IPSec user certificate** drop-down menu.
+1. Select the certificate you imported from the **IPSec CA certificate** drop-down menu.
+1. Select **(receive from server)** from the **IPSec server certificate** drop-down menu.
+1. Tap **Save**. Then tap the new VPN connection and tap **Connect**.
 
 Once connected, you can verify that your traffic is being routed properly by [looking up your IP address on Google](https://www.google.com/search?q=my+ip). It should say "Your public IP address is `Your VPN Server IP`".
 
@@ -435,7 +470,7 @@ rm vpnclient.p12
 
 # (Important) Protect certificate and private key files
 # Note: This step is optional, but strongly recommended.
-sudo chown root.root ca.cer client.cer client.key
+sudo chown root:root ca.cer client.cer client.key
 sudo chmod 600 ca.cer client.cer client.key
 ```
 
@@ -544,6 +579,7 @@ for the entire network, or use `192.168.0.10` for just one device, and so on.
 **See also:** [Check logs and VPN status](clients.md#check-logs-and-vpn-status), [IKEv1 troubleshooting](clients.md#ikev1-troubleshooting) and [Advanced usage](advanced-usage.md).
 
 * [Cannot connect to the VPN server](#cannot-connect-to-the-vpn-server)
+* [macOS Sonoma clients reconnect](#macos-sonoma-clients-reconnect)
 * [Unable to connect multiple IKEv2 clients](#unable-to-connect-multiple-ikev2-clients)
 * [IKE authentication credentials are unacceptable](#ike-authentication-credentials-are-unacceptable)
 * [Policy match error](#policy-match-error)
@@ -559,6 +595,50 @@ First, make sure that the VPN server address specified on your VPN client device
 For servers with an external firewall (e.g. [EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html)/[GCE](https://cloud.google.com/vpc/docs/firewalls)), open UDP ports 500 and 4500 for the VPN. Aliyun users, see [#433](https://github.com/hwdsl2/setup-ipsec-vpn/issues/433).
 
 [Check logs and VPN status](clients.md#check-logs-and-vpn-status) for errors. If you encounter retransmission related errors and are unable to connect, there may be network issues between the VPN client and server. If you are connecting from mainland China, consider switching to alternative solutions other than IPsec VPN.
+
+### macOS Sonoma clients reconnect
+
+macOS 14 (Sonoma) has [a minor issue](https://github.com/hwdsl2/setup-ipsec-vpn/issues/1486) that may cause IKEv2 VPN to disconnect and reconnect once every 24-48 minutes. Other macOS versions are not affected. First [check your macOS version](https://support.apple.com/en-us/HT201260). To work around this issue, follow the steps below.
+
+**Note:** If you installed IPsec VPN after December 10, 2023, no action is required because the following fixes are already included.
+
+1. Edit `/etc/ipsec.d/ikev2.conf` on the VPN server. Find the line:
+   ```
+     ike=aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
+   ```
+   and replace it with the following:
+   ```
+     ike=aes_gcm_c_256-hmac_sha2_256-ecp_256,aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
+   ```
+   **Note:** Docker users should first [open a Bash shell inside the container](https://github.com/hwdsl2/docker-ipsec-vpn-server/blob/master/docs/advanced-usage.md#bash-shell-inside-container).
+1. Save the file and run `service ipsec restart`. Docker users: After step 4 below, `exit` the container and run `docker restart ipsec-vpn-server`.
+1. Edit `/opt/src/ikev2.sh` on the VPN server. Find and replace the following sections with these new values:
+   ```
+     <key>ChildSecurityAssociationParameters</key>
+     <dict>
+       <key>DiffieHellmanGroup</key>
+       <integer>19</integer>
+       <key>EncryptionAlgorithm</key>
+       <string>AES-256-GCM</string>
+       <key>LifeTimeInMinutes</key>
+       <integer>1410</integer>
+     </dict>
+   ```
+   ```
+     <key>IKESecurityAssociationParameters</key>
+     <dict>
+       <key>DiffieHellmanGroup</key>
+       <integer>19</integer>
+       <key>EncryptionAlgorithm</key>
+       <string>AES-256-GCM</string>
+       <key>IntegrityAlgorithm</key>
+       <string>SHA2-256</string>
+       <key>LifeTimeInMinutes</key>
+       <integer>1410</integer>
+     </dict>
+   ```
+1. Run `sudo ikev2.sh` to export (or add) updated client config files for each macOS device you have.
+1. Remove the previously imported IKEv2 profile (if any) from your macOS device(s), then import the updated `.mobileconfig` file(s). See [Configure IKEv2 VPN clients](#configure-ikev2-vpn-clients). Docker users, see [Configure and use IKEv2 VPN](https://github.com/hwdsl2/docker-ipsec-vpn-server/blob/master/README.md#configure-and-use-ikev2-vpn).
 
 ### Unable to connect multiple IKEv2 clients
 
@@ -812,7 +892,7 @@ wget https://get.vpnsetup.net/ikev2addr -O ikev2addr.sh
 sudo bash ikev2addr.sh
 ```
 
-**Important:** After running this script, you must manually update the server address (and remote ID, if applicable) on any existing IKEv2 client devices. For iOS clients, you'll need to export and re-import client configuration using the IKEv2 [helper script](#set-up-ikev2-using-helper-script).
+**Important:** After running this script, you must manually update the server address (and remote ID, if applicable) on any existing IKEv2 client devices. For iOS clients, you'll need to run `sudo ikev2.sh` to export the updated client config file and import it to the iOS device.
 
 ## Update IKEv2 helper script
 
@@ -901,6 +981,7 @@ Options:
   --revokeclient [client name]  revoke an existing client
   --deleteclient [client name]  delete an existing client
   --removeikev2                 remove IKEv2 and delete all certificates and keys from the IPsec database
+  -y, --yes                     assume "yes" as answer to prompts when revoking/deleting a client or removing IKEv2
   -h, --help                    show this help message and exit
 
 To customize IKEv2 or client options, run this script without arguments.
@@ -964,7 +1045,7 @@ View example steps for manually configuring IKEv2 with Libreswan.
      ikev2=insist
      rekey=no
      pfs=no
-     ike=aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
+     ike=aes_gcm_c_256-hmac_sha2_256-ecp_256,aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
      phase2alg=aes_gcm-null,aes128-sha1,aes256-sha1,aes128-sha2,aes256-sha2
      ikelifetime=24h
      salifetime=24h

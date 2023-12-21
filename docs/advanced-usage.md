@@ -6,6 +6,7 @@
 * [DNS name and server IP changes](#dns-name-and-server-ip-changes)
 * [IKEv2-only VPN](#ikev2-only-vpn)
 * [Internal VPN IPs and traffic](#internal-vpn-ips-and-traffic)
+* [Specify VPN server's public IP](#specify-vpn-servers-public-ip)
 * [Customize VPN subnets](#customize-vpn-subnets)
 * [Port forwarding to VPN clients](#port-forwarding-to-vpn-clients)
 * [Split tunneling](#split-tunneling)
@@ -16,13 +17,21 @@
 
 ## Use alternative DNS servers
 
-Clients are set to use [Google Public DNS](https://developers.google.com/speed/public-dns/) when the VPN is active. If another DNS provider is preferred, you may replace `8.8.8.8` and `8.8.4.4` in these files: `/etc/ppp/options.xl2tpd`, `/etc/ipsec.conf` and `/etc/ipsec.d/ikev2.conf` (if exists). Then run `service ipsec restart` and `service xl2tpd restart`.
+By default, clients are set to use [Google Public DNS](https://developers.google.com/speed/public-dns/) when the VPN is active. If another DNS provider is preferred, you may replace `8.8.8.8` and `8.8.4.4` in these files: `/etc/ppp/options.xl2tpd`, `/etc/ipsec.conf` and `/etc/ipsec.d/ikev2.conf` (if exists). Then run `service ipsec restart` and `service xl2tpd restart`.
 
-Advanced users can define `VPN_DNS_SRV1` and optionally `VPN_DNS_SRV2` when running the VPN setup script and the [IKEv2 helper script](ikev2-howto.md#set-up-ikev2-using-helper-script). For example, if you want to use [Cloudflare's DNS service](https://1.1.1.1/dns/):
+Below is a list of some popular public DNS providers for your reference.
 
-```
-sudo VPN_DNS_SRV1=1.1.1.1 VPN_DNS_SRV2=1.0.0.1 sh vpn.sh
-```
+| Provider | Primary DNS | Secondary DNS | Notes |
+| -------- | ----------- | ------------- | ----- |
+| [Google Public DNS](https://developers.google.com/speed/public-dns) | 8.8.8.8 | 8.8.4.4 | Default in this project |
+| [Cloudflare](https://1.1.1.1/dns/) | 1.1.1.1 | 1.0.0.1 | See also: [Cloudflare for families](https://1.1.1.1/family/) |
+| [Quad9](https://www.quad9.net) | 9.9.9.9 | 149.112.112.112 | Blocks malicious domains |
+| [OpenDNS](https://www.opendns.com/home-internet-security/) | 208.67.222.222 | 208.67.220.220 | Blocks phishing domains, configurable. |
+| [CleanBrowsing](https://cleanbrowsing.org/filters/) | 185.228.168.9 | 185.228.169.9 | [Domain filters](https://cleanbrowsing.org/filters/) available |
+| [NextDNS](https://nextdns.io/?from=bg25bwmp) | Varies | Varies | Ad blocking, free tier available. [Learn more](https://nextdns.io/?from=bg25bwmp). |
+| [Control D](https://controld.com/free-dns) | Varies | Varies | Ad blocking, configurable. [Learn more](https://controld.com/free-dns). |
+
+Advanced users can define `VPN_DNS_SRV1` and optionally `VPN_DNS_SRV2` when running the VPN setup script. For more details, see [Customize VPN options](../README.md#customize-vpn-options).
 
 In certain circumstances, you may want VPN clients to use the specified DNS server(s) only for resolving internal domain name(s), and use their locally configured DNS servers to resolve all other domain names. This can be configured using the `modecfgdomains` option, e.g. `modecfgdomains="internal.example.com, home"`. Add this option to section `conn ikev2-cp` in `/etc/ipsec.d/ikev2.conf` for IKEv2, and to section `conn xauth-psk` in `/etc/ipsec.conf` for IPsec/XAuth ("Cisco IPsec"). Then run `service ipsec restart`. IPsec/L2TP mode does not support this option.
 
@@ -182,9 +191,38 @@ iptables -I FORWARD 4 -i ppp+ -d 192.168.43.0/24 -j DROP
 iptables -I FORWARD 5 -s 192.168.43.0/24 -o ppp+ -j DROP
 ```
 
+## Specify VPN server's public IP
+
+On servers with multiple public IP addresses, advanced users can specify a public IP for the VPN server using variable `VPN_PUBLIC_IP`. For example, if the server has IPs `192.0.2.1` and `192.0.2.2`, and you want the VPN server to use `192.0.2.2`:
+
+```
+sudo VPN_PUBLIC_IP=192.0.2.2 sh vpn.sh
+```
+
+Note that this variable has no effect for IKEv2 mode, if IKEv2 is already set up on the server. In this case, you may remove IKEv2 and set it up again using custom options. Refer to [Set up IKEv2 using helper script](ikev2-howto.md#set-up-ikev2-using-helper-script).
+
+Additional configuration may be required if you want VPN clients to use the specified public IP as their "outgoing IP" when the VPN connection is active, and the specified IP is NOT the main IP (or default route) on the server. In this case, you may need to change IPTables rules on the server. To persist after reboot, you can add these commands to `/etc/rc.local`.
+
+Continuing with the example above, if you want the "outgoing IP" to be `192.0.2.2`:
+
+```
+# Get default network interface name
+netif=$(ip -4 route list 0/0 | grep -m 1 -Po '(?<=dev )(\S+)')
+# Remove MASQUERADE rules
+iptables -t nat -D POSTROUTING -s 192.168.43.0/24 -o "$netif" -m policy --dir out --pol none -j MASQUERADE
+iptables -t nat -D POSTROUTING -s 192.168.42.0/24 -o "$netif" -j MASQUERADE
+# Add SNAT rules
+iptables -t nat -I POSTROUTING -s 192.168.43.0/24 -o "$netif" -m policy --dir out --pol none -j SNAT --to 192.0.2.2
+iptables -t nat -I POSTROUTING -s 192.168.42.0/24 -o "$netif" -j SNAT --to 192.0.2.2
+```
+
+**Note:** The method above only applies if the VPN server's default network interface maps to multiple public IPs. This method may not work if the server has multiple network interfaces, each with a different public IP.
+
+To check the "outgoing IP" for a connected VPN client, you may open a browser on the client and [look up the IP address on Google](https://www.google.com/search?q=my+ip).
+
 ## Customize VPN subnets
 
-By default, IPsec/L2TP VPN clients will use internal VPN subnet `192.168.42.0/24`, while IPsec/XAuth ("Cisco IPsec") and IKEv2 VPN clients will use internal VPN subnet `192.168.43.0/24`. For more details, read the previous section.
+By default, IPsec/L2TP VPN clients will use internal VPN subnet `192.168.42.0/24`, while IPsec/XAuth ("Cisco IPsec") and IKEv2 VPN clients will use internal VPN subnet `192.168.43.0/24`. For more details, see [Internal VPN IPs and traffic](#internal-vpn-ips-and-traffic).
 
 For most use cases, it is NOT necessary and NOT recommended to customize these subnets. If your use case requires it, however, you may specify custom subnet(s) when installing the VPN.
 
@@ -221,14 +259,14 @@ In certain circumstances, you may want to forward port(s) on the VPN server to a
 
 **Warning:** Port forwarding will expose port(s) on the VPN client to the entire Internet, which could be a **security risk**! This is NOT recommended, unless your use case requires it.
 
-**Note:** The internal VPN IPs assigned to VPN clients are dynamic, and firewalls on client devices may block forwarded traffic. To assign static IPs to VPN clients, refer to the previous section. To check which IP is assigned to a client, view the connection status on the VPN client.
+**Note:** The internal VPN IPs assigned to VPN clients are dynamic, and firewalls on client devices may block forwarded traffic. To assign static IPs to VPN clients, see [Internal VPN IPs and traffic](#internal-vpn-ips-and-traffic). To check which IP is assigned to a client, view the connection status on the VPN client.
 
 Example 1: Forward TCP port 443 on the VPN server to the IPsec/L2TP client at `192.168.42.10`.
 ```
 # Get default network interface name
 netif=$(ip -4 route list 0/0 | grep -m 1 -Po '(?<=dev )(\S+)')
 iptables -I FORWARD 2 -i "$netif" -o ppp+ -p tcp --dport 443 -j ACCEPT
-iptables -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to 192.168.42.10
+iptables -t nat -A PREROUTING -i "$netif" -p tcp --dport 443 -j DNAT --to 192.168.42.10
 ```
 
 Example 2: Forward UDP port 123 on the VPN server to the IKEv2 (or IPsec/XAuth) client at `192.168.43.10`.
@@ -236,7 +274,7 @@ Example 2: Forward UDP port 123 on the VPN server to the IKEv2 (or IPsec/XAuth) 
 # Get default network interface name
 netif=$(ip -4 route list 0/0 | grep -m 1 -Po '(?<=dev )(\S+)')
 iptables -I FORWARD 2 -i "$netif" -d 192.168.43.0/24 -p udp --dport 123 -j ACCEPT
-iptables -t nat -A PREROUTING -p udp --dport 123 -j DNAT --to 192.168.43.10
+iptables -t nat -A PREROUTING -i "$netif" ! -s 192.168.43.0/24 -p udp --dport 123 -j DNAT --to 192.168.43.10
 ```
 
 If you want the rules to persist after reboot, you may add these commands to `/etc/rc.local`. To remove the added IPTables rules, run the commands again, but replace `-I FORWARD 2` with `-D FORWARD`, and replace `-A PREROUTING` with `-D PREROUTING`.

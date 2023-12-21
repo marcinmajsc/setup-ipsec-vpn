@@ -153,7 +153,7 @@ Libreswan 支持通过使用 RSA 签名算法的 X.509 Machine Certificates 来�
 
 （可选功能）启用 **VPN On Demand（按需连接）** 以在你的 Mac 连接到 Wi-Fi 时自动启动 VPN 连接。要启用它，选中 VPN 连接的 **按需连接** 复选框，然后单击 **应用**。对于 macOS Ventura 和更新版本，首先单击 VPN 连接右边的 "i" 图标，然后配置该选项。
 
-你可以自定义按需连接规则，以排除某些 Wi-Fi 网络（例如你的家庭网络）。参见 [:book: Book: 搭建自己的 IPsec VPN, OpenVPN 和 WireGuard 服务器](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-X8X5FVFZC) 中的 "指南：为 macOS 和 iOS 自定义 IKEv2 VPN On Demand 规则"。
+你可以自定义按需连接规则，以排除某些 Wi-Fi 网络（例如你的家庭网络）。有关更多详细信息，请参阅 [:book: Book: 搭建自己的 IPsec VPN, OpenVPN 和 WireGuard 服务器](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-X8X5FVFZC) 中的 "指南：为 macOS 和 iOS 自定义 IKEv2 VPN On Demand 规则" 一章。
 
 <details>
 <summary>
@@ -188,6 +188,8 @@ Libreswan 支持通过使用 RSA 签名算法的 X.509 Machine Certificates 来�
 
 如果在连接过程中遇到错误，请参见 [故障排除](#ikev2-故障排除)。
 
+**注：** macOS 14 (Sonoma) 存在一个小问题，可能会导致 IKEv2 VPN 每 24-48 分钟断开并重新连接一次。其他 macOS 版本不受影响。有关详细信息和解决方法，请参阅 [macOS Sonoma 客户端重新连接](#macos-sonoma-客户端重新连接)。
+
 <details>
 <summary>
 删除 IKEv2 VPN 连接。
@@ -215,8 +217,36 @@ Libreswan 支持通过使用 RSA 签名算法的 X.509 Machine Certificates 来�
 
 （可选功能）启用 **VPN On Demand（按需连接）** 以在你的 iOS 设备连接到 Wi-Fi 时自动启动 VPN 连接。要启用它，单击 VPN 连接右边的 "i" 图标，然后启用 **按需连接**。
 
-你可以自定义按需连接规则，以排除某些 Wi-Fi 网络（例如你的家庭网络），或者在 Wi-Fi 和蜂窝网络上都启动 VPN 连接。参见 [:book: Book: 搭建自己的 IPsec VPN, OpenVPN 和 WireGuard 服务器](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-X8X5FVFZC) 中的 "指南：为 macOS 和 iOS 自定义 IKEv2 VPN On Demand 规则"。
+你可以自定义按需连接规则，以排除某些 Wi-Fi 网络（例如你的家庭网络）。有关更多详细信息，请参阅 [:book: Book: 搭建自己的 IPsec VPN, OpenVPN 和 WireGuard 服务器](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-X8X5FVFZC) 中的 "指南：为 macOS 和 iOS 自定义 IKEv2 VPN On Demand 规则" 一章。
 
+<details>
+<summary>
+自定义按需连接规则：在 Wi-Fi 和蜂窝网络上连接。
+</summary>
+
+默认的 VPN On Demand 配置仅在 Wi-Fi 网络上启动 VPN 连接，而不会在蜂窝网络上启动 VPN 连接。如果你希望 VPN 在 Wi-Fi 和蜂窝网络上都启动连接：
+
+1. 编辑 VPN 服务器上的 `/opt/src/ikev2.sh`。找到以下行：
+   ```
+     <dict>
+       <key>InterfaceTypeMatch</key>
+       <string>Cellular</string>
+       <key>Action</key>
+       <string>Disconnect</string>
+     </dict>
+   ```
+   并将 "Disconnect" 替换为 "Connect"：
+   ```
+     <dict>
+       <key>InterfaceTypeMatch</key>
+       <string>Cellular</string>
+       <key>Action</key>
+       <string>Connect</string>
+     </dict>
+   ```
+2. 保存文件，然后运行 `sudo ikev2.sh` 为你的 iOS 设备导出更新后的客户端配置文件。
+3. 从你的 iOS 设备中移除之前导入的 VPN 配置文件，然后导入步骤 2 中生成的新 `.mobileconfig` 文件。
+</details>
 <details>
 <summary>
 如果你手动配置 IKEv2 而不是使用辅助脚本，点这里查看步骤。
@@ -260,7 +290,11 @@ Libreswan 支持通过使用 RSA 签名算法的 X.509 Machine Certificates 来�
 
 ### Android
 
+#### 使用 strongSwan VPN 客户端
+
 [[支持者] **屏幕录影：** 使用 Android strongSwan VPN 客户端连接](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-X8X5FVFZC)
+
+Android 用户可以使用 strongSwan VPN 客户端连接（推荐）。
 
 1. 将生成的 `.sswan` 文件安全地传送到你的 Android 设备。
 1. 从 [**Google Play**](https://play.google.com/store/apps/details?id=org.strongswan.android)，[**F-Droid**](https://f-droid.org/en/packages/org.strongswan.android/) 或 [**strongSwan 下载网站**](https://download.strongswan.org/Android/)下载并安装 strongSwan VPN 客户端。
@@ -273,33 +307,7 @@ Libreswan 支持通过使用 RSA 签名算法的 X.509 Machine Certificates 来�
 1. 单击 **导入**。
 1. 单击新的 VPN 配置文件以开始连接。
 
-<details open>
-<summary>
-或者，Android 11+ 用户也可以使用系统自带的 IKEv2 客户端连接。
-</summary>
-
-[[支持者] **屏幕录影：** 使用 Android 11+ 系统自带的 VPN 客户端连接](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-X8X5FVFZC)
-
-1. 将生成的 `.p12` 文件安全地传送到你的 Android 设备。
-1. 启动 **设置** App。
-1. 进入 安全 -> 高级 -> 加密与凭据。
-1. 单击 **安装证书**。
-1. 单击 **VPN 和应用用户证书**。
-1. 选择你从服务器传送过来的 `.p12` 文件。   
-   **注：** 要查找 `.p12` 文件，单击左上角的抽拉式菜单，然后浏览到你保存文件的目录。
-1. 为证书输入名称，然后单击 **确定**。
-1. 进入 设置 -> 网络和互联网 -> VPN，然后单击 "+" 按钮。
-1. 为 VPN 配置文件输入名称。
-1. 在 **类型** 下拉菜单选择 **IKEv2/IPSec RSA**。
-1. 在 **服务器地址** 字段中输入 `你的 VPN 服务器 IP` （或者域名）。   
-   **注：** 它必须与 IKEv2 辅助脚本输出中的服务器地址 **完全一致**。
-1. 在 **IPSec 标识符** 字段中输入任意内容（例如 `empty`）。   
-   **注：** 该字段不应该为必填。它是 Android 的一个 bug。
-1. 在 **IPSec 用户证书** 下拉菜单选择你导入的证书。
-1. 在 **IPSec CA 证书** 下拉菜单选择你导入的证书。
-1. 在 **IPSec 服务器证书** 下拉菜单选择 **(来自服务器)**。
-1. 单击 **保存**。然后单击新的 VPN 连接并单击 **连接**。
-</details>
+（可选功能）你可以选择启用 Android 上的 "始终开启的 VPN" 功能。启动 **设置** App，进入 网络和互联网 -> 高级 -> VPN，单击 "strongSwan VPN 客户端" 右边的设置图标，然后启用 **始终开启的 VPN** 以及 **屏蔽未使用 VPN 的所有连接** 选项。
 
 <details>
 <summary>
@@ -308,9 +316,6 @@ Libreswan 支持通过使用 RSA 签名算法的 X.509 Machine Certificates 来�
 
 如果你的设备运行 Android 6.0 (Marshmallow) 或更早版本，要使用 strongSwan VPN 客户端连接，你必须更改 VPN 服务器上的以下设置：编辑服务器上的 `/etc/ipsec.d/ikev2.conf`。在 `conn ikev2-cp` 小节的末尾添加 `authby=rsa-sha1`，开头必须空两格。保存文件并运行 `service ipsec restart`。
 </details>
-
-（可选功能）你可以选择启用 Android 上的 "始终开启的 VPN" 功能。启动 **设置** App，进入 网络和互联网 -> 高级 -> VPN，单击 "strongSwan VPN 客户端" 右边的设置图标，然后启用 **始终开启的 VPN** 以及 **屏蔽未使用 VPN 的所有连接** 选项。
-
 <details>
 <summary>
 如果你手动配置 IKEv2 而不是使用辅助脚本，点这里查看步骤。
@@ -348,6 +353,36 @@ Libreswan 支持通过使用 RSA 签名算法的 X.509 Machine Certificates 来�
 1. **（重要）** 单击 **显示高级设置**。向下滚动，找到并启用 **Use RSA/PSS signatures** 选项。
 1. 保存新的 VPN 连接，然后单击它以开始连接。
 </details>
+
+连接成功后，你可以到 [这里](https://www.ipchicken.com) 检测你的 IP 地址，应该显示为`你的 VPN 服务器 IP`。
+
+如果在连接过程中遇到错误，请参见 [故障排除](#ikev2-故障排除)。
+
+#### 使用系统自带的 IKEv2 客户端
+
+[[支持者] **屏幕录影：** 使用 Android 11+ 系统自带的 VPN 客户端连接](https://ko-fi.com/post/Support-this-project-and-get-access-to-supporter-o-X8X5FVFZC)
+
+Android 11+ 用户也可以使用系统自带的 IKEv2 客户端连接。
+
+1. 将生成的 `.p12` 文件安全地传送到你的 Android 设备。
+1. 启动 **设置** App。
+1. 进入 安全 -> 高级 -> 加密与凭据。
+1. 单击 **安装证书**。
+1. 单击 **VPN 和应用用户证书**。
+1. 选择你从服务器传送过来的 `.p12` 文件。   
+   **注：** 要查找 `.p12` 文件，单击左上角的抽拉式菜单，然后浏览到你保存文件的目录。
+1. 为证书输入名称，然后单击 **确定**。
+1. 进入 设置 -> 网络和互联网 -> VPN，然后单击 "+" 按钮。
+1. 为 VPN 配置文件输入名称。
+1. 在 **类型** 下拉菜单选择 **IKEv2/IPSec RSA**。
+1. 在 **服务器地址** 字段中输入 `你的 VPN 服务器 IP` （或者域名）。   
+   **注：** 它必须与 IKEv2 辅助脚本输出中的服务器地址 **完全一致**。
+1. 在 **IPSec 标识符** 字段中输入任意内容（例如 `empty`）。   
+   **注：** 该字段不应该为必填。它是 Android 的一个 bug。
+1. 在 **IPSec 用户证书** 下拉菜单选择你导入的证书。
+1. 在 **IPSec CA 证书** 下拉菜单选择你导入的证书。
+1. 在 **IPSec 服务器证书** 下拉菜单选择 **(来自服务器)**。
+1. 单击 **保存**。然后单击新的 VPN 连接并单击 **连接**。
 
 连接成功后，你可以到 [这里](https://www.ipchicken.com) 检测你的 IP 地址，应该显示为`你的 VPN 服务器 IP`。
 
@@ -433,7 +468,7 @@ rm vpnclient.p12
 
 # （重要）保护证书和私钥文件
 # 注：这一步是可选的，但强烈推荐。
-sudo chown root.root ca.cer client.cer client.key
+sudo chown root:root ca.cer client.cer client.key
 sudo chmod 600 ca.cer client.cer client.key
 ```
 
@@ -542,6 +577,7 @@ sudo chmod 600 ca.cer client.cer client.key
 **另见：** [检查日志及 VPN 状态](clients-zh.md#检查日志及-vpn-状态)，[IKEv1 故障排除](clients-zh.md#ikev1-故障排除) 和 [高级用法](advanced-usage-zh.md)。
 
 * [无法连接到 VPN 服务器](#无法连接到-vpn-服务器)
+* [macOS Sonoma 客户端重新连接](#macos-sonoma-客户端重新连接)
 * [无法连接多个 IKEv2 客户端](#无法连接多个-ikev2-客户端)
 * [IKE 身份验证凭证不可接受](#ike-身份验证凭证不可接受)
 * [参数错误 policy match error](#参数错误-policy-match-error)
@@ -557,6 +593,50 @@ sudo chmod 600 ca.cer client.cer client.key
 对于有外部防火墙的服务器（比如 [EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html)/[GCE](https://cloud.google.com/vpc/docs/firewalls)），请为 VPN 打开 UDP 端口 500 和 4500。阿里云用户请参见 [#433](https://github.com/hwdsl2/setup-ipsec-vpn/issues/433)。
 
 [检查日志及 VPN 状态](clients-zh.md#检查日志及-vpn-状态)是否有错误。如果你遇到 retransmission 相关错误并且无法连接，说明 VPN 客户端和服务器之间的网络可能有问题。如果你从中国大陆进行连接，请考虑改用 IPsec VPN 以外的其他解决方案。
+
+### macOS Sonoma 客户端重新连接
+
+macOS 14 (Sonoma) 存在[一个小问题](https://github.com/hwdsl2/setup-ipsec-vpn/issues/1486)，可能会导致 IKEv2 VPN 每 24-48 分钟断开并重新连接一次。其他 macOS 版本不受影响。首先[检查你的 macOS 版本](https://support.apple.com/zh-cn/HT201260)。要解决此问题，请按以下步骤操作。
+
+**注：** 如果你在 2023 年 12 月 10 日之后安装了 IPsec VPN，则无需执行任何操作，因为已经包含以下修复。
+
+1. 编辑 VPN 服务器上的 `/etc/ipsec.d/ikev2.conf`。找到这一行：
+   ```
+     ike=aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
+   ```
+   并将它替换为以下内容：
+   ```
+     ike=aes_gcm_c_256-hmac_sha2_256-ecp_256,aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
+   ```
+   **注：** Docker 用户需要首先[在容器中运行 Bash shell](https://github.com/hwdsl2/docker-ipsec-vpn-server/blob/master/docs/advanced-usage-zh.md#在容器中运行-bash-shell)。
+1. 保存文件并运行 `service ipsec restart`。Docker 用户：在下面的第 4 步之后退出 (`exit`) 容器并运行 `docker restart ipsec-vpn-server`。
+1. 编辑 VPN 服务器上的 `/opt/src/ikev2.sh`。找到以下部分并将其替换为这些新值：
+   ```
+     <key>ChildSecurityAssociationParameters</key>
+     <dict>
+       <key>DiffieHellmanGroup</key>
+       <integer>19</integer>
+       <key>EncryptionAlgorithm</key>
+       <string>AES-256-GCM</string>
+       <key>LifeTimeInMinutes</key>
+       <integer>1410</integer>
+     </dict>
+   ```
+   ```
+     <key>IKESecurityAssociationParameters</key>
+     <dict>
+       <key>DiffieHellmanGroup</key>
+       <integer>19</integer>
+       <key>EncryptionAlgorithm</key>
+       <string>AES-256-GCM</string>
+       <key>IntegrityAlgorithm</key>
+       <string>SHA2-256</string>
+       <key>LifeTimeInMinutes</key>
+       <integer>1410</integer>
+     </dict>
+   ```
+1. 运行 `sudo ikev2.sh` 为你的每个 macOS 设备导出（或添加）更新后的客户端配置文件。
+1. 从你的 macOS 设备中移除之前导入的 IKEv2 配置文件（如果有），然后导入更新后的 `.mobileconfig` 文件。请参阅[配置 IKEv2 VPN 客户端](#配置-ikev2-vpn-客户端)。Docker 用户请看[配置并使用 IKEv2 VPN](https://github.com/hwdsl2/docker-ipsec-vpn-server/blob/master/README-zh.md#配置并使用-ikev2-vpn)。
 
 ### 无法连接多个 IKEv2 客户端
 
@@ -810,7 +890,7 @@ wget https://get.vpnsetup.net/ikev2addr -O ikev2addr.sh
 sudo bash ikev2addr.sh
 ```
 
-**重要：** 运行此脚本后，你必须手动更新任何现有 IKEv2 客户端设备上的服务器地址以及 Remote ID（如果适用）。对于 iOS 客户端，你需要使用 IKEv2 [辅助脚本](#使用辅助脚本配置-ikev2) 导出然后重新导入客户端配置。
+**重要：** 运行此脚本后，你必须手动更新任何现有 IKEv2 客户端设备上的服务器地址以及 Remote ID（如果适用）。对于 iOS 客户端，你需要运行 `sudo ikev2.sh` 以导出更新后的客户端配置文件并导入 iOS 设备。
 
 ## 更新 IKEv2 辅助脚本
 
@@ -899,6 +979,7 @@ Options:
   --revokeclient [client name]  revoke an existing client
   --deleteclient [client name]  delete an existing client
   --removeikev2                 remove IKEv2 and delete all certificates and keys from the IPsec database
+  -y, --yes                     assume "yes" as answer to prompts when revoking/deleting a client or removing IKEv2
   -h, --help                    show this help message and exit
 
 To customize IKEv2 or client options, run this script without arguments.
@@ -962,7 +1043,7 @@ To customize IKEv2 or client options, run this script without arguments.
      ikev2=insist
      rekey=no
      pfs=no
-     ike=aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
+     ike=aes_gcm_c_256-hmac_sha2_256-ecp_256,aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
      phase2alg=aes_gcm-null,aes128-sha1,aes256-sha1,aes128-sha2,aes256-sha2
      ikelifetime=24h
      salifetime=24h

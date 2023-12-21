@@ -6,6 +6,7 @@
 * [域名和更改服务器 IP](#域名和更改服务器-ip)
 * [仅限 IKEv2 的 VPN](#仅限-ikev2-的-vpn)
 * [VPN 内网 IP 和流量](#vpn-内网-ip-和流量)
+* [指定 VPN 服务器的公有 IP](#指定-vpn-服务器的公有-ip)
 * [自定义 VPN 子网](#自定义-vpn-子网)
 * [转发端口到 VPN 客户端](#转发端口到-vpn-客户端)
 * [VPN 分流](#vpn-分流)
@@ -16,13 +17,21 @@
 
 ## 使用其他的 DNS 服务器
 
-在 VPN 已连接时，客户端配置为使用 [Google Public DNS](https://developers.google.com/speed/public-dns/)。如果偏好其它的域名解析服务，你可以编辑以下文件：`/etc/ppp/options.xl2tpd`, `/etc/ipsec.conf` 和 `/etc/ipsec.d/ikev2.conf`（如果存在），并替换 `8.8.8.8` 和 `8.8.4.4`。然后运行 `service ipsec restart` 和 `service xl2tpd restart`。
+在 VPN 已连接时，客户端默认配置为使用 [Google Public DNS](https://developers.google.com/speed/public-dns/)。如果偏好其它的域名解析服务，你可以编辑以下文件：`/etc/ppp/options.xl2tpd`, `/etc/ipsec.conf` 和 `/etc/ipsec.d/ikev2.conf`（如果存在），并替换 `8.8.8.8` 和 `8.8.4.4`。然后运行 `service ipsec restart` 和 `service xl2tpd restart`。
 
-高级用户可以在运行 VPN 安装脚本和 [IKEv2 辅助脚本](ikev2-howto-zh.md#使用辅助脚本配置-ikev2) 时定义 `VPN_DNS_SRV1` 和 `VPN_DNS_SRV2`（可选）。比如你想使用 [Cloudflare 的 DNS 服务](https://1.1.1.1/dns/)：
+以下是一些流行的公共 DNS 提供商的列表，供你参考。
 
-```
-sudo VPN_DNS_SRV1=1.1.1.1 VPN_DNS_SRV2=1.0.0.1 sh vpn.sh
-```
+| 提供商 | 主 DNS | 辅助 DNS | 注释 |
+| ----- | ------ | ------- | ---- |
+| [Google Public DNS](https://developers.google.com/speed/public-dns) | 8.8.8.8 | 8.8.4.4 | 本项目默认 |
+| [Cloudflare](https://1.1.1.1/dns/) | 1.1.1.1 | 1.0.0.1 | 另见：[Cloudflare for families](https://1.1.1.1/family/) |
+| [Quad9](https://www.quad9.net) | 9.9.9.9 | 149.112.112.112 | 阻止恶意域 |
+| [OpenDNS](https://www.opendns.com/home-internet-security/) | 208.67.222.222 | 208.67.220.220 | 阻止网络钓鱼域，可配置。 |
+| [CleanBrowsing](https://cleanbrowsing.org/filters/) | 185.228.168.9 | 185.228.169.9 | [域过滤器](https://cleanbrowsing.org/filters/)可用 |
+| [NextDNS](https://nextdns.io/?from=bg25bwmp) | 按需选择 | 按需选择 | 广告拦截，免费套餐可用。[了解更多](https://nextdns.io/?from=bg25bwmp)。 |
+| [Control D](https://controld.com/free-dns) | 按需选择 | 按需选择 | 广告拦截，可配置。[了解更多](https://controld.com/free-dns)。 |
+
+高级用户可以在运行 VPN 安装脚本时定义 `VPN_DNS_SRV1` 和 `VPN_DNS_SRV2`（可选）。有关更多详细信息，请参见[自定义 VPN 选项](../README-zh.md#自定义-vpn-选项)。
 
 在某些情况下，你可能希望 VPN 客户端仅使用指定的 DNS 服务器来解析内部域名，并使用其本地配置的 DNS 服务器来解析所有其他域名。这可以使用 `modecfgdomains` 选项进行配置，例如 `modecfgdomains="internal.example.com, home"`。对于 IKEv2，将此选项添加到 `/etc/ipsec.d/ikev2.conf` 中的 `conn ikev2-cp` 小节。对于 IPsec/XAuth ("Cisco IPsec")，将此选项添加到 `/etc/ipsec.conf` 中的 `conn xauth-psk` 小节。然后运行 `service ipsec restart`。IPsec/L2TP 模式不支持此选项。
 
@@ -182,9 +191,38 @@ iptables -I FORWARD 4 -i ppp+ -d 192.168.43.0/24 -j DROP
 iptables -I FORWARD 5 -s 192.168.43.0/24 -o ppp+ -j DROP
 ```
 
+## 指定 VPN 服务器的公有 IP
+
+在具有多个公有 IP 地址的服务器上，高级用户可以使用变量 `VPN_PUBLIC_IP` 为 VPN 服务器指定一个公有 IP。例如，如果服务器的 IP 为 `192.0.2.1` 和 `192.0.2.2`，并且你想要 VPN 服务器使用 `192.0.2.2`：
+
+```
+sudo VPN_PUBLIC_IP=192.0.2.2 sh vpn.sh
+```
+
+请注意，如果在服务器上已经配置了 IKEv2，则此变量对 IKEv2 模式无效。在这种情况下，你可以移除 IKEv2 并使用自定义选项重新配置它。参见 [使用辅助脚本配置 IKEv2](ikev2-howto-zh.md#使用辅助脚本配置-ikev2)。
+
+如果你想要 VPN 客户端在 VPN 连接处于活动状态时使用指定的公有 IP 作为其 "出站 IP"，并且指定的 IP **不是** 服务器上的主 IP（或默认路由），则可能需要额外的配置。在这种情况下，你可能需要更改服务器上的 IPTables 规则。如果要在重启后继续有效，你可以将这些命令添加到 `/etc/rc.local`。
+
+继续上面的例子，如果你希望 "出站 IP" 为 `192.0.2.2`：
+
+```
+# 获取默认网络接口名称
+netif=$(ip -4 route list 0/0 | grep -m 1 -Po '(?<=dev )(\S+)')
+# 移除 MASQUERADE 规则
+iptables -t nat -D POSTROUTING -s 192.168.43.0/24 -o "$netif" -m policy --dir out --pol none -j MASQUERADE
+iptables -t nat -D POSTROUTING -s 192.168.42.0/24 -o "$netif" -j MASQUERADE
+# 添加 SNAT 规则
+iptables -t nat -I POSTROUTING -s 192.168.43.0/24 -o "$netif" -m policy --dir out --pol none -j SNAT --to 192.0.2.2
+iptables -t nat -I POSTROUTING -s 192.168.42.0/24 -o "$netif" -j SNAT --to 192.0.2.2
+```
+
+**注：** 以上方法仅适用于服务器的默认网络接口对应多个公有 IP 的情况。如果服务器有多个网络接口，对应不同的公有 IP，则此方法无效。
+
+要检查一个已连接的 VPN 客户端的 "出站 IP"，你可以在该客户端上打开浏览器并到 [这里](https://www.ipchicken.com) 检测 IP 地址。
+
 ## 自定义 VPN 子网
 
-默认情况下，IPsec/L2TP VPN 客户端将使用内部 VPN 子网 `192.168.42.0/24`，而 IPsec/XAuth ("Cisco IPsec") 和 IKEv2 VPN 客户端将使用内部 VPN 子网 `192.168.43.0/24`。有关更多详细信息，请阅读上一节。
+默认情况下，IPsec/L2TP VPN 客户端将使用内部 VPN 子网 `192.168.42.0/24`，而 IPsec/XAuth ("Cisco IPsec") 和 IKEv2 VPN 客户端将使用内部 VPN 子网 `192.168.43.0/24`。有关更多详细信息，请参见 [VPN 内网 IP 和流量](#vpn-内网-ip-和流量)。
 
 对于大多数用例，没有必要也 **不建议** 自定义这些子网。但是，如果你的用例需要它，你可以在安装 VPN 时指定自定义子网。
 
@@ -221,14 +259,14 @@ sh vpn.sh
 
 **警告：** 端口转发会将 VPN 客户端上的端口暴露给整个因特网，这可能会带来**安全风险**！**不建议**这样做，除非你的用例需要它。
 
-**注：** 为 VPN 客户端分配的内网 IP 是动态的，而且客户端设备上的防火墙可能会阻止转发的流量。如果要将静态 IP 分配给 VPN 客户端，请参见上一节。要找到为特定的客户端分配的 IP，可以查看该 VPN 客户端上的连接状态。
+**注：** 为 VPN 客户端分配的内网 IP 是动态的，而且客户端设备上的防火墙可能会阻止转发的流量。如果要将静态 IP 分配给 VPN 客户端，请参见 [VPN 内网 IP 和流量](#vpn-内网-ip-和流量)。要找到为特定的客户端分配的 IP，可以查看该 VPN 客户端上的连接状态。
 
 示例 1：将 VPN 服务器上的 TCP 端口 443 转发到位于 `192.168.42.10` 的 IPsec/L2TP 客户端。
 ```
 # 获取默认网络接口名称
 netif=$(ip -4 route list 0/0 | grep -m 1 -Po '(?<=dev )(\S+)')
 iptables -I FORWARD 2 -i "$netif" -o ppp+ -p tcp --dport 443 -j ACCEPT
-iptables -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to 192.168.42.10
+iptables -t nat -A PREROUTING -i "$netif" -p tcp --dport 443 -j DNAT --to 192.168.42.10
 ```
 
 示例 2：将 VPN 服务器上的 UDP 端口 123 转发到位于 `192.168.43.10` 的 IKEv2（或 IPsec/XAuth）客户端。
@@ -236,7 +274,7 @@ iptables -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to 192.168.42.10
 # 获取默认网络接口名称
 netif=$(ip -4 route list 0/0 | grep -m 1 -Po '(?<=dev )(\S+)')
 iptables -I FORWARD 2 -i "$netif" -d 192.168.43.0/24 -p udp --dport 123 -j ACCEPT
-iptables -t nat -A PREROUTING -p udp --dport 123 -j DNAT --to 192.168.43.10
+iptables -t nat -A PREROUTING -i "$netif" ! -s 192.168.43.0/24 -p udp --dport 123 -j DNAT --to 192.168.43.10
 ```
 
 如果你想要这些规则在重启后仍然有效，可以将这些命令添加到 `/etc/rc.local`。要删除添加的 IPTables 规则，请再次运行这些命令，但是将 `-I FORWARD 2` 替换为 `-D FORWARD`，并且将 `-A PREROUTING` 替换为 `-D PREROUTING`。
