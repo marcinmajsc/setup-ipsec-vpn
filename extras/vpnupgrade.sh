@@ -6,7 +6,7 @@
 # The latest version of this script is available at:
 # https://github.com/hwdsl2/setup-ipsec-vpn
 #
-# Copyright (C) 2021-2023 Lin Song <linsongui@gmail.com>
+# Copyright (C) 2021-2024 Lin Song <linsongui@gmail.com>
 #
 # This work is licensed under the Creative Commons Attribution-ShareAlike 3.0
 # Unported License: http://creativecommons.org/licenses/by-sa/3.0/
@@ -90,13 +90,18 @@ EOF
     esac
     if [ "$os_type" = "alpine" ]; then
       os_ver=$(. /etc/os-release && printf '%s' "$VERSION_ID" | cut -d '.' -f 1,2)
-      if [ "$os_ver" != "3.17" ] && [ "$os_ver" != "3.18" ]; then
-        exiterr "This script only supports Alpine Linux 3.17/3.18."
+      if [ "$os_ver" != "3.18" ] && [ "$os_ver" != "3.19" ]; then
+        exiterr "This script only supports Alpine Linux 3.18/3.19."
       fi
     else
       os_ver=$(sed 's/\..*//' /etc/debian_version | tr -dc 'A-Za-z0-9')
-      if [ "$os_ver" = 8 ] || [ "$os_ver" = "jessiesid" ]; then
-        exiterr "Debian 8 or Ubuntu < 16.04 is not supported."
+      if [ "$os_ver" = 8 ] || [ "$os_ver" = 9 ] || [ "$os_ver" = "jessiesid" ] \
+        || [ "$os_ver" = "bustersid" ]; then
+cat 1>&2 <<EOF
+Error: This script requires Debian >= 10 or Ubuntu >= 20.04.
+       This version of Ubuntu/Debian is too old and not supported.
+EOF
+        exit 1
       fi
     fi
   fi

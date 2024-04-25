@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2020-2023 Lin Song <linsongui@gmail.com>
+# Copyright (C) 2020-2024 Lin Song <linsongui@gmail.com>
 #
 # This work is licensed under the Creative Commons Attribution-ShareAlike 3.0
 # Unported License: http://creativecommons.org/licenses/by-sa/3.0/
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.repository_owner == 'hwdsl2'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Check
@@ -106,13 +106,3 @@ jobs:
           diff update_vpn_users2.sh  ../extras/update_vpn_users.sh
           diff ikev2changeaddr2.sh   ../extras/ikev2changeaddr.sh
           diff ikev2onlymode2.sh     ../extras/ikev2onlymode.sh
-
-          url1="https://mirrors.kernel.org/ubuntu/pool/main/n/nss"
-          url2="https://mirrors.kernel.org/ubuntu/pool/universe/n/nss"
-          deb1="libnss3_3.49.1-1ubuntu1.9_amd64.deb"
-          deb2="libnss3-dev_3.49.1-1ubuntu1.9_amd64.deb"
-          deb3="libnss3-tools_3.49.1-1ubuntu1.9_amd64.deb"
-
-          $wg 1.deb "$url1/$deb1"
-          $wg 2.deb "$url1/$deb2"
-          $wg 3.deb "$url2/$deb3"

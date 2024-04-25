@@ -562,8 +562,10 @@ ipsec trafficstatus
 要解决这些错误，请按以下步骤操作：
 
 1. 右键单击系统托盘中的无线/网络图标。
-1. 选择 **打开网络和共享中心**。或者，如果你使用 Windows 10 版本 1709 或以上，选择 **打开"网络和 Internet"设置**，然后在打开的页面中单击 **网络和共享中心**。
-1. 单击左侧的 **更改适配器设置**。右键单击新的 VPN 连接，并选择 **属性**。
+1. **Windows 11:** 选择 **网络和 Internet 设置**，然后在打开的页面中单击 **高级网络设置**。单击 **更多网络适配器选项**。   
+   **Windows 10:** 选择 **打开"网络和 Internet"设置**，然后在打开的页面中单击 **网络和共享中心**。单击左侧的 **更改适配器设置**。   
+   **Windows 8/7:** 选择 **打开网络和共享中心**。单击左侧的 **更改适配器设置**。
+1. 右键单击新的 VPN 连接，并选择 **属性**。
 1. 单击 **安全** 选项卡，从 **VPN 类型** 下拉菜单中选择 "使用 IPsec 的第 2 层隧道协议 (L2TP/IPSec)"。
 1. 单击 **允许使用这些协议**。选中 "质询握手身份验证协议 (CHAP)" 和 "Microsoft CHAP 版本 2 (MS-CHAP v2)" 复选框。
 1. 单击 **高级设置** 按钮。
@@ -643,7 +645,7 @@ Debian 用户：运行 `uname -r` 检查你的服务器的 Linux 内核版本。
 
 注： 这个协议仅适用于本文档。
 
-版权所有 (C) 2016-2023 [Lin Song](https://github.com/hwdsl2) [![View my profile on LinkedIn](https://static.licdn.com/scds/common/u/img/webpromo/btn_viewmy_160x25.png)](https://www.linkedin.com/in/linsongui)   
+版权所有 (C) 2016-2024 [Lin Song](https://github.com/hwdsl2) [![View my profile on LinkedIn](https://static.licdn.com/scds/common/u/img/webpromo/btn_viewmy_160x25.png)](https://www.linkedin.com/in/linsongui)   
 受到 [Joshua Lund 的工作](https://github.com/StreisandEffect/streisand/blob/6aa6b6b2735dd829ca8c417d72eb2768a89b6639/playbooks/roles/l2tp-ipsec/templates/instructions.md.j2) 的启发
 
 本程序为自由软件，在自由软件联盟发布的[ GNU 通用公共许可协议](https://www.gnu.org/licenses/gpl.html)的约束下，你可以对其进行再发布及修改。协议版本为第三版或（随你）更新的版本。

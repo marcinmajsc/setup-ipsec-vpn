@@ -281,9 +281,9 @@ iptables -t nat -A PREROUTING -i "$netif" ! -s 192.168.43.0/24 -p udp --dport 12
 
 ## VPN 分流
 
-在启用 VPN 分流 (split tunneling) 时，VPN 客户端将仅通过 VPN 隧道发送特定目标子网的流量。其他流量 **不会** 通过 VPN 隧道。VPN 分流有一些局限性，而且并非所有的 VPN 客户端都支持。
+在启用 VPN 分流 (split tunneling) 时，VPN 客户端将仅通过 VPN 隧道发送特定目标子网的流量。其他流量 **不会** 通过 VPN 隧道。这允许你通过 VPN 安全访问指定的网络，而无需通过 VPN 发送所有客户端的流量。VPN 分流有一些局限性，而且并非所有的 VPN 客户端都支持。
 
-高级用户可以为 [IPsec/XAuth ("Cisco IPsec")](clients-xauth-zh.md) 和/或 [IKEv2](ikev2-howto-zh.md) 模式启用 VPN 分流。这是可选的。IPsec/L2TP 模式 **不支持** 此功能。
+高级用户可以为 [IPsec/XAuth ("Cisco IPsec")](clients-xauth-zh.md) 和/或 [IKEv2](ikev2-howto-zh.md) 模式启用 VPN 分流。这是可选的。展开查看详情。IPsec/L2TP 模式不支持此功能（Windows 除外，见下文）。
 
 <details>
 <summary>
@@ -320,6 +320,28 @@ IKEv2 模式：启用 VPN 分流 (split tunneling)
 
 **注：** 高级用户可以为特定的 IKEv2 客户端设置不同的 VPN 分流配置。请参见 [VPN 内网 IP 和流量](#vpn-内网-ip-和流量) 部分并展开 "IKEv2 模式：为 VPN 客户端分配静态 IP"。在该部分中的示例的基础上，你可以将 `leftsubnet=...` 选项添加到特定 IKEv2 客户端的 `conn` 小节，然后重启 IPsec 服务。
 </details>
+
+另外，Windows 用户也可以通过手动添加路由的方式启用 VPN 分流：
+
+1. 右键单击系统托盘中的无线/网络图标。
+1. **Windows 11:** 选择 **网络和 Internet 设置**，然后在打开的页面中单击 **高级网络设置**。单击 **更多网络适配器选项**。   
+   **Windows 10:** 选择 **打开"网络和 Internet"设置**，然后在打开的页面中单击 **网络和共享中心**。单击左侧的 **更改适配器设置**。   
+   **Windows 8/7:** 选择 **打开网络和共享中心**。单击左侧的 **更改适配器设置**。
+1. 右键单击新的 VPN 连接，并选择 **属性**。
+1. 单击 **网络** 选项卡，选择 **Internet Protocol Version 4 (TCP/IPv4)**，然后单击 **属性**。
+1. 单击 **高级**，然后取消选中 **在远程网络上使用默认网关**。
+1. 单击 **确定** 以关闭 **属性** 对话框。
+1. **（重要）** 断开 VPN 连接，然后重新连接。
+1. 假设你想要 VPN 客户端通过 VPN 隧道发送流量的子网是 `10.123.123.0/24`。打开[提升权限命令提示符](http://www.cnblogs.com/xxcanghai/p/4610054.html)并运行以下命令之一。   
+   对于 IKEv2 和 IPsec/XAuth ("Cisco IPsec") 模式：
+   ```
+   route add -p 10.123.123.0 mask 255.255.255.0 192.168.43.1
+   ```
+   对于 IPsec/L2TP 模式：
+   ```
+   route add -p 10.123.123.0 mask 255.255.255.0 192.168.42.1
+   ```
+1. 完成后，VPN 客户端将通过 VPN 隧道仅发送指定子网的流量。其他流量将绕过 VPN。
 
 ## 访问 VPN 服务器的网段
 
@@ -376,7 +398,7 @@ VPN 服务器搭建完成后，可以通过部署 Google BBR 拥塞控制算法�
 
 ## 授权协议
 
-版权所有 (C) 2021-2023 [Lin Song](https://github.com/hwdsl2) [![View my profile on LinkedIn](https://static.licdn.com/scds/common/u/img/webpromo/btn_viewmy_160x25.png)](https://www.linkedin.com/in/linsongui)   
+版权所有 (C) 2021-2024 [Lin Song](https://github.com/hwdsl2) [![View my profile on LinkedIn](https://static.licdn.com/scds/common/u/img/webpromo/btn_viewmy_160x25.png)](https://www.linkedin.com/in/linsongui)   
 
 [![Creative Commons License](https://i.creativecommons.org/l/by-sa/3.0/88x31.png)](http://creativecommons.org/licenses/by-sa/3.0/)   
 这个项目是以 [知识共享署名-相同方式共享3.0](http://creativecommons.org/licenses/by-sa/3.0/) 许可协议授权。   

@@ -8,7 +8,7 @@
 # The latest version of this script is available at:
 # https://github.com/hwdsl2/setup-ipsec-vpn
 #
-# Copyright (C) 2020-2023 Lin Song <linsongui@gmail.com>
+# Copyright (C) 2020-2024 Lin Song <linsongui@gmail.com>
 #
 # This work is licensed under the Creative Commons Attribution-ShareAlike 3.0
 # Unported License: http://creativecommons.org/licenses/by-sa/3.0/
@@ -60,6 +60,9 @@ check_os() {
     elif grep -q "release 8" "$rh_file"; then
       os_ver=8
       grep -qi stream "$rh_file" && os_ver=8s
+      if [ "$os_type$os_ver" = "centos8" ]; then
+        exiterr "CentOS Linux 8 is EOL and not supported."
+      fi
     elif grep -q "release 9" "$rh_file"; then
       os_ver=9
       grep -qi stream "$rh_file" && os_ver=9s
@@ -96,11 +99,19 @@ EOF
     esac
     if [ "$os_type" = "alpine" ]; then
       os_ver=$(. /etc/os-release && printf '%s' "$VERSION_ID" | cut -d '.' -f 1,2)
-      if [ "$os_ver" != "3.17" ] && [ "$os_ver" != "3.18" ]; then
-        exiterr "This script only supports Alpine Linux 3.17/3.18."
+      if [ "$os_ver" != "3.18" ] && [ "$os_ver" != "3.19" ]; then
+        exiterr "This script only supports Alpine Linux 3.18/3.19."
       fi
     else
       os_ver=$(sed 's/\..*//' /etc/debian_version | tr -dc 'A-Za-z0-9')
+      if [ "$os_ver" = 8 ] || [ "$os_ver" = 9 ] || [ "$os_ver" = "jessiesid" ] \
+        || [ "$os_ver" = "bustersid" ]; then
+cat 1>&2 <<EOF
+Error: This script requires Debian >= 10 or Ubuntu >= 20.04.
+       This version of Ubuntu/Debian is too old and not supported.
+EOF
+        exit 1
+      fi
     fi
   fi
 }
@@ -157,7 +168,7 @@ confirm_or_abort() {
 show_header() {
 cat <<'EOF'
 
-IKEv2 Script   Copyright (c) 2020-2023 Lin Song   13 Dec 2023
+IKEv2 Script   Copyright (c) 2020-2024 Lin Song   14 Apr 2024
 
 EOF
 }
@@ -820,7 +831,7 @@ export_p12_file() {
         -legacy -name "$client_name" -passin "pass:$p12_password" -passout pass: || exit 1
     fi
     /bin/rm -f "$pem_file"
-  elif [ "$os_type" = "alpine" ] || [ "$os_ver" = "kalirolling" ] || [ "$os_type$os_ver" = "ubuntu11" ]; then
+  elif [ "$os_type" = "alpine" ] || [ "$os_ver" = "kalirolling" ] || [ "$os_ver" = "bullseyesid" ]; then
     pem_file="$export_dir$client_name.temp.pem"
     openssl pkcs12 -in "$p12_file_enc" -out "$pem_file" -passin "pass:$p12_password" -passout "pass:$p12_password" || exit 1
     openssl pkcs12 -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -export -in "$pem_file" -out "$p12_file_enc" \
@@ -1218,40 +1229,6 @@ EOF
     echo "  mobike=yes" >> "$IKEV2_CONF"
   else
     echo "  mobike=no" >> "$IKEV2_CONF"
-  fi
-}
-
-apply_ubuntu1804_nss_fix() {
-  os_arch=$(uname -m | tr -dc 'A-Za-z0-9_-')
-  if [ "$os_type" = "ubuntu" ] && [ "$os_ver" = "bustersid" ] && [ "$os_arch" = "x86_64" ] \
-    && ! dpkg -l libnss3-dev 2>/dev/null | grep -qF '3.49.1'; then
-    base_url="https://github.com/hwdsl2/vpn-extras/releases/download/v1.0.0"
-    nss_url1="https://mirrors.kernel.org/ubuntu/pool/main/n/nss"
-    nss_url2="https://mirrors.kernel.org/ubuntu/pool/universe/n/nss"
-    deb1="libnss3_3.49.1-1ubuntu1.9_amd64.deb"
-    deb2="libnss3-dev_3.49.1-1ubuntu1.9_amd64.deb"
-    deb3="libnss3-tools_3.49.1-1ubuntu1.9_amd64.deb"
-    bigecho2 "Applying fix for NSS bug on Ubuntu 18.04..."
-    mkdir -p /opt/src
-    cd /opt/src || exit 1
-    nss_dl=0
-    /bin/rm -f "$deb1" "$deb2" "$deb3"
-    export DEBIAN_FRONTEND=noninteractive
-    if wget -t 3 -T 30 -q "$base_url/$deb1" "$base_url/$deb2" "$base_url/$deb3"; then
-      apt-get -yqq update || apt-get -yqq update
-      apt-get -yqq install "./$deb1" "./$deb2" "./$deb3" >/dev/null
-    else
-      /bin/rm -f "$deb1" "$deb2" "$deb3"
-      if wget -t 3 -T 30 -q "$nss_url1/$deb1" "$nss_url1/$deb2" "$nss_url2/$deb3"; then
-        apt-get -yqq update || apt-get -yqq update
-        apt-get -yqq install "./$deb1" "./$deb2" "./$deb3" >/dev/null
-      else
-        nss_dl=1
-        echo "Error: Could not download NSS packages." >&2
-      fi
-    fi
-    /bin/rm -f "$deb1" "$deb2" "$deb3"
-    [ "$nss_dl" = 1 ] && exit 1
   fi
 }
 
@@ -1748,7 +1725,6 @@ ikev2setup() {
     mobike_enable="$mobike_support"
   fi
 
-  apply_ubuntu1804_nss_fix
   create_ca_server_certs
   create_client_cert
   export_client_config

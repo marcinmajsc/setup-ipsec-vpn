@@ -5,7 +5,7 @@
 # The latest version of this script is available at:
 # https://github.com/hwdsl2/setup-ipsec-vpn
 #
-# Copyright (C) 2016-2023 Lin Song <linsongui@gmail.com>
+# Copyright (C) 2016-2024 Lin Song <linsongui@gmail.com>
 #
 # This work is licensed under the Creative Commons Attribution-ShareAlike 3.0
 # Unported License: http://creativecommons.org/licenses/by-sa/3.0/
@@ -41,7 +41,6 @@ check_vz() {
 
 check_os() {
   os_type=$(lsb_release -si 2>/dev/null)
-  os_arch=$(uname -m | tr -dc 'A-Za-z0-9_-')
   [ -z "$os_type" ] && [ -f /etc/os-release ] && os_type=$(. /etc/os-release && printf '%s' "$ID")
   case $os_type in
     [Uu]buntu)
@@ -58,14 +57,11 @@ check_os() {
       ;;
   esac
   os_ver=$(sed 's/\..*//' /etc/debian_version | tr -dc 'A-Za-z0-9')
-  if [ "$os_ver" = 8 ] || [ "$os_ver" = "jessiesid" ]; then
-    exiterr "Debian 8 or Ubuntu < 16.04 is not supported."
-  fi
-  if [ "$os_type" = "ubuntu" ] && [ "$os_ver" = "bustersid" ] \
-    && [ "$os_arch" != "x86_64" ]; then
+  if [ "$os_ver" = 8 ] || [ "$os_ver" = 9 ] || [ "$os_ver" = "jessiesid" ] \
+    || [ "$os_ver" = "bustersid" ]; then
 cat 1>&2 <<EOF
-Error: For Ubuntu 18.04, this script supports only the x86_64 architecture.
-       This system runs on $os_arch and is unsupported.
+Error: This script requires Debian >= 10 or Ubuntu >= 20.04.
+       This version of Ubuntu/Debian is too old and not supported.
 EOF
     exit 1
   fi
@@ -84,7 +80,7 @@ EOF
 }
 
 get_swan_ver() {
-  swan_ver_cur=4.12
+  swan_ver_cur=4.15
   base_url="https://github.com/hwdsl2/vpn-extras/releases/download/v1.0.0"
   swan_ver_url="$base_url/upg-v1-$os_type-$os_ver-swanver"
   swan_ver_latest=$(wget -t 2 -T 10 -qO- "$swan_ver_url" | head -n 1)
@@ -95,8 +91,8 @@ get_swan_ver() {
 }
 
 check_swan_ver() {
-  if [ "$SWAN_VER" = "4.8" ]; then
-    exiterr "Libreswan version 4.8 is not supported."
+  if [ "$SWAN_VER" = "4.8" ] || [ "$SWAN_VER" = "4.13" ]; then
+    exiterr "Libreswan version $SWAN_VER is not supported."
   fi
   if [ "$SWAN_VER" = "3.32" ] && [ "$os_ver" = "11" ]; then
     exiterr "Libreswan 3.32 is not supported on Debian 11."
@@ -178,35 +174,6 @@ install_pkgs() {
       libcurl4-nss-dev libnss3-tools libevent-dev libsystemd-dev \
       flex bison gcc make wget sed >/dev/null
   ) || exiterr2
-}
-
-install_nss_pkgs() {
-  if [ "$os_type" = "ubuntu" ] && [ "$os_ver" = "bustersid" ] && [ "$os_arch" = "x86_64" ] \
-    && ! dpkg -l libnss3-dev 2>/dev/null | grep -qF '3.49.1'; then
-    base_url="https://github.com/hwdsl2/vpn-extras/releases/download/v1.0.0"
-    nss_url1="https://mirrors.kernel.org/ubuntu/pool/main/n/nss"
-    nss_url2="https://mirrors.kernel.org/ubuntu/pool/universe/n/nss"
-    deb1="libnss3_3.49.1-1ubuntu1.9_amd64.deb"
-    deb2="libnss3-dev_3.49.1-1ubuntu1.9_amd64.deb"
-    deb3="libnss3-tools_3.49.1-1ubuntu1.9_amd64.deb"
-    bigecho "Installing NSS packages on Ubuntu 18.04..."
-    cd /opt/src || exit 1
-    nss_dl=0
-    /bin/rm -f "$deb1" "$deb2" "$deb3"
-    if wget -t 3 -T 30 -q "$base_url/$deb1" "$base_url/$deb2" "$base_url/$deb3"; then
-      apt-get -yqq install "./$deb1" "./$deb2" "./$deb3" >/dev/null
-    else
-      /bin/rm -f "$deb1" "$deb2" "$deb3"
-      if wget -t 3 -T 30 -q "$nss_url1/$deb1" "$nss_url1/$deb2" "$nss_url2/$deb3"; then
-        apt-get -yqq install "./$deb1" "./$deb2" "./$deb3" >/dev/null
-      else
-        nss_dl=1
-        echo "Error: Could not download NSS packages." >&2
-      fi
-    fi
-    /bin/rm -f "$deb1" "$deb2" "$deb3"
-    [ "$nss_dl" = 1 ] && exit 1
-  fi
 }
 
 get_libreswan() {
@@ -356,7 +323,6 @@ vpnupgrade() {
   start_setup
   update_apt_cache
   install_pkgs
-  install_nss_pkgs
   get_libreswan
   install_libreswan
   update_ikev2_script

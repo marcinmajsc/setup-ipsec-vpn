@@ -560,8 +560,10 @@ For error 789, click [here](https://documentation.meraki.com/MX/Client_VPN/Troub
 To fix these errors, please follow these steps:
 
 1. Right-click on the wireless/network icon in your system tray.
-1. Select **Open Network and Sharing Center**. Or, if using Windows 10 version 1709 or newer, select **Open Network & Internet settings**, then on the page that opens, click **Network and Sharing Center**.
-1. On the left, click **Change adapter settings**. Right-click on the new VPN and choose **Properties**.
+1. **Windows 11:** Select **Network and Internet settings**, then on the page that opens, click **Advanced network settings**. Click **More network adapter options**.   
+   **Windows 10:** Select **Open Network & Internet settings**, then on the page that opens, click **Network and Sharing Center**. On the left, click **Change adapter settings**.   
+   **Windows 8/7:** Select **Open Network and Sharing Center**. On the left, click **Change adapter settings**.
+1. Right-click on the new VPN connection, and choose **Properties**.
 1. Click the **Security** tab. Select "Layer 2 Tunneling Protocol with IPsec (L2TP/IPSec)" for **Type of VPN**.
 1. Click **Allow these protocols**. Check the "Challenge Handshake Authentication Protocol (CHAP)" and "Microsoft CHAP Version 2 (MS-CHAP v2)" checkboxes.
 1. Click the **Advanced settings** button.
@@ -641,7 +643,7 @@ To fix the issue with IPsec/L2TP mode, you may switch to the standard Linux kern
 
 Note: This license applies to this document only.
 
-Copyright (C) 2016-2023 [Lin Song](https://github.com/hwdsl2) [![View my profile on LinkedIn](https://static.licdn.com/scds/common/u/img/webpromo/btn_viewmy_160x25.png)](https://www.linkedin.com/in/linsongui)   
+Copyright (C) 2016-2024 [Lin Song](https://github.com/hwdsl2) [![View my profile on LinkedIn](https://static.licdn.com/scds/common/u/img/webpromo/btn_viewmy_160x25.png)](https://www.linkedin.com/in/linsongui)   
 Inspired by [the work of Joshua Lund](https://github.com/StreisandEffect/streisand/blob/6aa6b6b2735dd829ca8c417d72eb2768a89b6639/playbooks/roles/l2tp-ipsec/templates/instructions.md.j2)
 
 This program is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License](https://www.gnu.org/licenses/gpl.html) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
